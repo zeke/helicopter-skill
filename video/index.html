@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>helicopter-video — production dashboard</title>
+<style>
+  :root {
+    --bg:       #0d0d0d;
+    --surface:  #141414;
+    --surface2: #1c1c1c;
+    --border:   #2a2a2a;
+    --text:     #e8e8e8;
+    --dim:      #666;
+    --green:    #22c55e;
+    --yellow:   #eab308;
+    --red:      #ef4444;
+    --blue:     #3b82f6;
+    --orange:   #f97316;
+    --mono:     'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--orange);
+    white-space: nowrap;
+  }
+  .header-stats {
+    display: flex; gap: 16px; flex-wrap: wrap; align-items: center;
+  }
+  .stat { display: flex; gap: 6px; align-items: center; font-size: 12px; color: var(--dim); }
+  .stat strong { font-weight: 600; }
+  .stat.green strong  { color: var(--green); }
+  .stat.yellow strong { color: var(--yellow); }
+  .stat.red strong    { color: var(--red); }
+  .stat.blue strong   { color: var(--blue); }
+
+  .progress-bar {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    width: 120px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--green);
+    transition: width 0.4s ease;
+    border-radius: 2px;
+  }
+
+  .pulse { animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── Main layout ── */
+  main { padding: 20px; max-width: 1600px; }
+
+  /* ── Segment card ── */
+  .segment {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .segment-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+  }
+  .segment-header:hover { background: var(--surface2); }
+  .seg-index {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--dim);
+    width: 24px;
+    flex-shrink: 0;
+  }
+  .seg-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    flex: 1;
+  }
+  .seg-chips {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+
+  /* ── Variants grid ── */
+  .variants {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 1px;
+    background: var(--border);
+  }
+  .variant {
+    background: var(--surface);
+    padding: 16px;
+  }
+  .variant-header {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 12px;
+  }
+  .variant-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--dim);
+    flex: 1;
+  }
+
+  /* ── Status badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 2px 8px; border-radius: 3px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .badge.pending  { background: #1f1f1f; color: var(--dim); border: 1px solid var(--border); }
+  .badge.running  { background: #1c2a1c; color: var(--yellow); border: 1px solid #2d3a1c; }
+  .badge.succeeded{ background: #0f2a1a; color: var(--green);  border: 1px solid #1a3a2a; }
+  .badge.failed   { background: #2a0f0f; color: var(--red);    border: 1px solid #3a1a1a; }
+  .badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .badge.running .dot { animation: pulse 1s ease-in-out infinite; }
+
+  /* ── Media output ── */
+  .media-area {
+    margin-bottom: 12px;
+    background: #0a0a0a;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .media-area video, .media-area img {
+    width: 100%;
+    display: block;
+  }
+  .media-placeholder {
+    color: var(--dim); font-size: 11px;
+    padding: 20px; text-align: center;
+  }
+
+  /* ── Metadata grid ── */
+  .meta-grid {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 2px 12px;
+    margin-bottom: 12px;
+  }
+  .meta-key {
+    color: var(--dim);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .meta-val {
+    color: var(--text);
+    font-size: 11px;
+    word-break: break-all;
+  }
+  .meta-val a { color: var(--blue); text-decoration: none; }
+  .meta-val a:hover { text-decoration: underline; }
+
+  /* ── Ref images ── */
+  .ref-images {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 12px;
+  }
+  .ref-images img {
+    height: 48px;
+    width: auto;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+    object-fit: cover;
+  }
+  .ref-images .ref-label {
+    font-size: 9px; color: var(--dim);
+    display: block; text-align: center;
+    margin-top: 2px;
+  }
+  .ref-thumb { display: flex; flex-direction: column; align-items: center; }
+
+  /* ── Prompt box ── */
+  .prompt-box {
+    background: #0a0a0a;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 11px;
+    color: #b0b0b0;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+  .prompt-box::-webkit-scrollbar { width: 4px; }
+  .prompt-box::-webkit-scrollbar-track { background: transparent; }
+  .prompt-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--dim);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    margin-top: 12px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── Final output ── */
+  .final-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 8px;
+  }
+  .final-section h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--orange);
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+  }
+  .final-section video {
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  /* ── Timing chip ── */
+  .chip {
+    font-size: 10px; padding: 1px 6px;
+    border-radius: 3px; font-weight: 600;
+    background: var(--surface2); color: var(--dim);
+    border: 1px solid var(--border);
+  }
+
+  /* ── Collapsible ── */
+  .collapse-arrow { color: var(--dim); font-size: 10px; transition: transform 0.2s; }
+  .segment.collapsed .collapse-arrow { transform: rotate(-90deg); }
+  .segment.collapsed .variants { display: none; }
+
+  /* ── Error text ── */
+  .error-text {
+    background: #2a0f0f; border: 1px solid #3a1a1a;
+    border-radius: 4px; padding: 8px 10px;
+    color: #f87171; font-size: 11px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+
+  /* ── Images gallery ── */
+  .images-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .images-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 14px;
+  }
+  .images-title {
+    font-size: 13px; font-weight: 700;
+    color: var(--orange); letter-spacing: 0.05em;
+    flex: 1;
+  }
+  .images-count { font-size: 11px; color: var(--dim); }
+  .images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 10px;
+  }
+  .img-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .img-card.succeeded { border-color: #1a3a2a; }
+  .img-card.failed    { border-color: #3a1a1a; }
+  .img-card.running   { border-color: #2d3a1c; }
+  .img-label {
+    padding: 7px 10px;
+    font-size: 11px; font-weight: 600;
+    color: var(--dim);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .img-wrap {
+    aspect-ratio: 16/9;
+    background: #0a0a0a;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .img-wrap img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    cursor: zoom-in;
+    transition: transform 0.15s;
+  }
+  .img-wrap img:hover { transform: scale(1.02); }
+  .img-placeholder {
+    font-size: 11px; color: var(--dim);
+    padding: 12px; text-align: center;
+  }
+  .img-meta {
+    padding: 7px 10px;
+    display: flex; align-items: center; gap: 8px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  /* ── Lightbox ── */
+  #lightbox {
+    display: none;
+    position: fixed; inset: 0; z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  #lb-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.88);
+    cursor: pointer;
+  }
+  #lb-content {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 10px; max-width: 90vw; max-height: 90vh;
+  }
+  #lb-label {
+    color: var(--text); font-size: 12px; font-weight: 600;
+    letter-spacing: 0.05em;
+  }
+  #lb-img {
+    max-width: 90vw; max-height: 80vh;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    object-fit: contain;
+  }
+  #lb-content button {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--dim); font-family: var(--mono); font-size: 11px;
+    padding: 5px 14px; border-radius: 4px; cursor: pointer;
+  }
+  #lb-content button:hover { color: var(--text); }
+
+  /* ── Live indicator ── */
+  .live-dot {
+    display: inline-block;
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    margin-right: 4px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  .live-dot.inactive { background: var(--dim); animation: none; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚁 helicopter-video</h1>
+  <div class="header-stats" id="header-stats">
+    <span class="stat"><span class="live-dot inactive" id="live-dot"></span><span id="stat-elapsed">—</span></span>
+    <span class="stat blue">predictions: <strong id="stat-total">—</strong></span>
+    <span class="stat yellow">running: <strong id="stat-running">—</strong></span>
+    <span class="stat green">done: <strong id="stat-done">—</strong></span>
+    <span class="stat red">failed: <strong id="stat-failed">—</strong></span>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+</header>
+
+<main id="main">
+  <div style="color: var(--dim); padding: 40px; text-align: center; font-size: 12px;">
+    Waiting for data/state.json…<br><br>
+    Run <code style="color:var(--orange)">npm run videos</code> to start generation.
+  </div>
+</main>
+
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+
+let state = null;
+let startTime = null;
+let elapsedTimer = null;
+
+// ── SSE ───────────────────────────────────────────────────────────────────
+
+function connectSSE() {
+  const es = new EventSource('/events');
+  const dot = document.getElementById('live-dot');
+
+  es.addEventListener('update', () => {
+    dot.classList.remove('inactive');
+    fetchState();
+    fetchImagesState();
+  });
+
+  es.onopen = () => dot.classList.remove('inactive');
+  es.onerror = () => {
+    dot.classList.add('inactive');
+    setTimeout(connectSSE, 3000);
+    es.close();
+  };
+}
+
+async function fetchState() {
+  try {
+    const res = await fetch('/data/state.json?_=' + Date.now());
+    if (!res.ok) return;
+    const newState = await res.json();
+    state = newState;
+    if (!startTime && state.startedAt) {
+      startTime = state.startedAt;
+      startElapsedTimer();
+    }
+    render();
+  } catch {}
+}
+
+// ── Elapsed timer ─────────────────────────────────────────────────────────
+
+function startElapsedTimer() {
+  if (elapsedTimer) clearInterval(elapsedTimer);
+  elapsedTimer = setInterval(() => {
+    if (!startTime) return;
+    const el = document.getElementById('stat-elapsed');
+    const secs = Math.floor((Date.now() - startTime) / 1000);
+    const m = Math.floor(secs / 60).toString().padStart(2, '0');
+    const s = (secs % 60).toString().padStart(2, '0');
+    el.textContent = `${m}:${s}`;
+  }, 1000);
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+
+function render() {
+  if (!state) return;
+
+  // Header stats
+  const allVariants = state.segments.flatMap(s => Object.values(s.variants));
+  const total     = state.totalPredictions;
+  const running   = allVariants.filter(v => v.status === 'running').length;
+  const succeeded = allVariants.filter(v => v.status === 'succeeded').length;
+  const failed    = allVariants.filter(v => v.status === 'failed').length;
+
+  document.getElementById('stat-total').textContent   = total;
+  document.getElementById('stat-running').textContent = running;
+  document.getElementById('stat-done').textContent    = succeeded;
+  document.getElementById('stat-failed').textContent  = failed;
+  document.getElementById('progress-fill').style.width = total > 0 ? `${(succeeded / total * 100).toFixed(0)}%` : '0%';
+
+  // Render segments
+  const main = document.getElementById('main');
+  if (!main._rendered) {
+    main.innerHTML = '';
+    main._rendered = true;
+  }
+
+  for (const seg of state.segments) {
+    let card = document.getElementById(`seg-${seg.index}`);
+    if (!card) {
+      card = document.createElement('div');
+      card.className = 'segment';
+      card.id = `seg-${seg.index}`;
+      main.appendChild(card);
+    }
+    renderSegment(card, seg);
+  }
+
+  // Final output
+  let finalEl = document.getElementById('final-output');
+  if (!finalEl) {
+    finalEl = document.createElement('div');
+    finalEl.id = 'final-output';
+    finalEl.className = 'final-section';
+    main.appendChild(finalEl);
+  }
+  renderFinal(finalEl);
+}
+
+function statusBadge(status) {
+  const icons = { pending: '○', running: '◉', succeeded: '●', failed: '✕' };
+  return `<span class="badge ${status}"><span class="dot"></span>${status}</span>`;
+}
+
+function renderSegment(card, seg) {
+  const variants = Object.entries(seg.variants);
+  const allDone   = variants.every(([, v]) => v.status === 'succeeded');
+  const anyRun    = variants.some(([, v])  => v.status === 'running');
+  const anyFailed = variants.some(([, v])  => v.status === 'failed');
+
+  const headerStatus = allDone ? 'succeeded' : anyRun ? 'running' : anyFailed ? 'failed' : 'pending';
+
+  // Track collapse state
+  const wasCollapsed = card.classList.contains('collapsed');
+
+  card.innerHTML = `
+    <div class="segment-header" onclick="toggleSegment(${seg.index})">
+      <span class="seg-index">${String(seg.index).padStart(2, '0')}</span>
+      <span class="seg-name">${seg.description}</span>
+      <div class="seg-chips">
+        ${statusBadge(headerStatus)}
+      </div>
+      <span class="collapse-arrow">▾</span>
+    </div>
+    <div class="variants">
+      ${variants.map(([vid, v]) => renderVariant(seg, vid, v)).join('')}
+    </div>
+  `;
+
+  // Re-apply collapse state
+  if (wasCollapsed && !anyRun) card.classList.add('collapsed');
+}
+
+function renderVariant(seg, vid, v) {
+  const timing = v.durationSec ? `<span class="chip">${v.durationSec.toFixed(1)}s predict</span>` : '';
+  const elapsed = (v.startedAt && v.status === 'running')
+    ? `<span class="chip pulse">${((Date.now() - v.startedAt) / 1000).toFixed(0)}s…</span>`
+    : '';
+
+  const predLink = v.predictionId
+    ? `<a href="https://replicate.com/p/${v.predictionId}" target="_blank">${v.predictionId.slice(0, 12)}…</a>`
+    : '—';
+
+  // Media
+  let mediaHtml = '';
+  if (v.outputFile) {
+    mediaHtml = `
+      <div class="media-area">
+        <video autoplay loop muted playsinline src="/${v.outputFile}?_=${v.completedAt}"
+          onmouseenter="this.muted=false"
+          onmouseleave="this.muted=true"></video>
+      </div>`;
+  } else {
+    const label = v.status === 'running'
+      ? `<div class="pulse" style="color:var(--yellow)">generating…</div>`
+      : `<div>${v.status === 'failed' ? '⚠ failed' : 'no output yet'}</div>`;
+    mediaHtml = `<div class="media-area"><div class="media-placeholder">${label}</div></div>`;
+  }
+
+  // Ref images
+  const refImgs = (seg.refImages[vid] || []);
+  const refHtml = refImgs.length > 0 ? `
+    <div class="section-label">reference images (${refImgs.length})</div>
+    <div class="ref-images">
+      ${refImgs.map(p => `
+        <div class="ref-thumb">
+          <img src="/${p}" onerror="this.style.display='none'" title="${p.split('/').pop()}">
+          <span class="ref-label">${p.split('/').pop()}</span>
+        </div>`).join('')}
+    </div>` : '';
+
+  // Error
+  const errHtml = v.error ? `<div class="error-text">${escHtml(v.error)}</div>` : '';
+
+  return `
+    <div class="variant">
+      <div class="variant-header">
+        <span class="variant-label">${vid.toUpperCase()} — ${seg.prompts[vid] ? (seg.duration?.[vid] ?? '') + 's' : ''}</span>
+        ${statusBadge(v.status)}
+        ${timing}${elapsed}
+      </div>
+
+      ${mediaHtml}
+
+      <div class="section-label">metadata</div>
+      <div class="meta-grid">
+        <span class="meta-key">prediction</span><span class="meta-val">${predLink}</span>
+        <span class="meta-key">duration</span><span class="meta-val">${seg.duration?.[vid] ?? '—'}s requested</span>
+        <span class="meta-key">model</span><span class="meta-val">bytedance/seedance-2.0</span>
+        ${v.outputFile ? `<span class="meta-key">output</span><span class="meta-val">${v.outputFile}</span>` : ''}
+      </div>
+
+      ${refHtml}
+
+      <div class="section-label">prompt</div>
+      <div class="prompt-box">${escHtml(seg.prompts[vid] || '—')}</div>
+
+      ${errHtml}
+    </div>`;
+}
+
+function renderFinal(el) {
+  // Check if output.mp4 exists by trying to load it
+  el.innerHTML = `
+    <h2>▶ output.mp4</h2>
+    <div id="final-media">
+      <video id="final-video" controls src="/data/output.mp4?_=${Date.now()}"
+        onerror="document.getElementById('final-media').innerHTML='<div class=\\'media-placeholder\\' style=\\'padding:20px;color:var(--dim)\\'>Run <code style=\\'color:var(--orange)\\'>npm run stitch</code> to generate output.mp4</div>'"
+        style="width:100%;border-radius:4px;border:1px solid var(--border)">
+      </video>
+    </div>`;
+}
+
+function toggleSegment(index) {
+  const card = document.getElementById(`seg-${index}`);
+  if (card) card.classList.toggle('collapsed');
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;');
+}
+
+// ── Images gallery ────────────────────────────────────────────────────────
+
+async function fetchImagesState() {
+  try {
+    const res = await fetch('/data/images-state.json?_=' + Date.now());
+    if (!res.ok) return;
+    const imgState = await res.json();
+    renderImagesGallery(imgState);
+  } catch {}
+}
+
+const IMAGE_LABELS = {
+  '01-neo.jpg':            '01 — Neo (rooftop)',
+  '02-helicopter.jpg':     '02 — Helicopter (wide shot)',
+  '03-trinity-phone.jpg':  '03 — Trinity (phone call)',
+  '04-tank-operator.jpg':  '04 — Tank (operator)',
+  '05-tank-console.jpg':   '05 — Tank (console)',
+  '06-trinity-upload.jpg': '06 — Trinity (upload)',
+  '07-walk.jpg':           '07 — Neo + Trinity (walk)',
+};
+
+function renderImagesGallery(imgState) {
+  let gallery = document.getElementById('images-gallery');
+  if (!gallery) {
+    gallery = document.createElement('div');
+    gallery.id = 'images-gallery';
+    gallery.className = 'images-section';
+    document.getElementById('main').prepend(gallery);
+  }
+
+  const entries = Object.entries(imgState);
+  const done = entries.filter(([,v]) => v.status === 'succeeded').length;
+  const total = entries.length;
+
+  gallery.innerHTML = `
+    <div class="images-header">
+      <span class="images-title">scene images</span>
+      <span class="images-count">${done}/${total} generated</span>
+      <div class="progress-bar" style="width:80px">
+        <div class="progress-fill" style="width:${(done/total*100).toFixed(0)}%"></div>
+      </div>
+    </div>
+    <div class="images-grid">
+      ${entries.map(([filename, v]) => `
+        <div class="img-card ${v.status}">
+          <div class="img-label">${IMAGE_LABELS[filename] || filename}</div>
+          <div class="img-wrap">
+            ${v.status === 'succeeded' && v.outputFile
+              ? `<img src="/${v.outputFile}?_=${v.completedAt}" loading="lazy" onclick="openLightbox('/${v.outputFile}?_=${v.completedAt}', '${IMAGE_LABELS[filename] || filename}')">`
+              : v.status === 'running'
+                ? `<div class="img-placeholder pulse">generating…</div>`
+                : v.status === 'failed'
+                  ? `<div class="img-placeholder" style="color:var(--red)">failed: ${escHtml(v.error||'')}</div>`
+                  : `<div class="img-placeholder">pending</div>`
+            }
+          </div>
+          <div class="img-meta">
+            ${statusBadge(v.status)}
+            ${v.predictionId ? `<a href="https://replicate.com/p/${v.predictionId}" target="_blank" style="color:var(--blue);font-size:10px">${v.predictionId.slice(0,10)}…</a>` : ''}
+            ${v.completedAt && v.startedAt ? `<span class="chip">${((v.completedAt - v.startedAt)/1000).toFixed(0)}s</span>` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────
+
+function openLightbox(src, label) {
+  let lb = document.getElementById('lightbox');
+  if (!lb) {
+    lb = document.createElement('div');
+    lb.id = 'lightbox';
+    lb.innerHTML = `
+      <div id="lb-backdrop" onclick="closeLightbox()"></div>
+      <div id="lb-content">
+        <div id="lb-label"></div>
+        <img id="lb-img">
+        <button onclick="closeLightbox()">✕ close</button>
+      </div>`;
+    document.body.appendChild(lb);
+  }
+  document.getElementById('lb-img').src = src;
+  document.getElementById('lb-label').textContent = label;
+  lb.style.display = 'flex';
+}
+function closeLightbox() {
+  const lb = document.getElementById('lightbox');
+  if (lb) lb.style.display = 'none';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+
+connectSSE();
+fetchState();
+fetchImagesState();
+
+// Also poll every 10s as fallback
+setInterval(fetchState, 10_000);
+
+// Refresh media timestamps every 5s to catch newly downloaded files
+setInterval(() => {
+  if (!state) return;
+  const videos = document.querySelectorAll('video[src]');
+  // Only refresh videos that are still loading (no videoWidth = not loaded)
+  videos.forEach(v => {
+    if (v.videoWidth === 0 && v.src && !v.src.includes('output.mp4')) {
+      const base = v.src.split('?')[0];
+      v.src = base + '?_=' + Date.now();
+    }
+  });
+}, 5_000);
+</script>
+</body>
+</html>

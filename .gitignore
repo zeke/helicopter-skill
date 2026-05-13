@@ -1,0 +1,8 @@
+.DS_Store
+helicopter.mp4
+
+# video pipeline — generated outputs, secrets, deps
+video/data/
+video/node_modules/
+video/.env
+video/assets/zekefake/

@@ -1,0 +1,16 @@
+{
+  "name": "helicopter-video",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "fetch-refs":  "npx tsx src/fetch-style-refs.ts",
+    "images":      "npx tsx src/generate-images.ts",
+    "videos":      "npx tsx src/generate-videos.ts",
+    "stitch":      "npx tsx src/stitch.ts",
+    "dev":         "npx tsx src/server.ts"
+  },
+  "devDependencies": {
+    "tsx":         "^4.19.2",
+    "typescript":  "^5.7.2"
+  }
+}
