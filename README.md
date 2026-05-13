@@ -1,8 +1,13 @@
 # helicopter-skill
 
-An agent skill that gives any AI agent the ability to fly a Bell 212 helicopter. Inspired by the scene in The Matrix (1999) where Trinity calls Tank and says "I need a pilot program for a B-212 helicopter. Hurry." — and seconds later, she flies.
+An agent skill that gives any AI agent the ability to fly helicopters. Inspired by the scene in The Matrix (1999) where Trinity calls Tank and says "I need a pilot program for a B-212 helicopter. Hurry." — and seconds later, she flies.
 
 This is that program. Install it, and any agent that loads this skill will know how to fly.
+
+Two aircraft are covered:
+
+- **Bell 212 (B-212 / UH-1N Twin Huey):** the twin-engine helicopter from The Matrix. Pre-flight, hover, takeoff, cruise, landing, single-engine failure, autorotation, hydraulic emergencies.
+- **Bell 47 (H-13 Sioux):** the iconic 1950s bubble-canopy helicopter from M*A*S*H — the world's first certified civilian helicopter, and the aircraft depicted in the accompanying short film. Includes the critical manual throttle correlation technique unique to this aircraft.
 
 ## Install
 
@@ -37,8 +42,8 @@ That scene is a perfect metaphor for agent skills: a discrete, loadable unit of 
 The skill lives in `SKILL.md`. It follows the [Agent Skills specification](https://github.com/agentskills/agentskills) which uses a three-level progressive disclosure model:
 
 - **Level 1 — YAML frontmatter** (~100 tokens): Always in context. Lets the agent decide when to activate the skill.
-- **Level 2 — SKILL.md body** (the main content): Loaded when the skill is activated. Contains the full flying reference: controls, hover, takeoff, cruise, approach, landing, single-engine failure, autorotation, hydraulic emergencies, and key numbers.
-- **Level 3 — `references/bell-212-specs.md`**: Full technical specifications loaded on demand when the agent needs deeper detail.
+- **Level 2 — SKILL.md body** (the main content): Loaded when the skill is activated. Contains the full flying reference for both aircraft: controls, hover, takeoff, cruise, approach, landing, single-engine failure, autorotation, hydraulic emergencies, and key numbers.
+- **Level 3 — `references/bell-212-specs.md` and `references/bell-47-specs.md`**: Full technical specifications for each aircraft, loaded on demand when the agent needs deeper detail.
 
 The skill works with OpenCode, Claude Code, Cursor, Codex, and 40+ other agents that support the spec.
 
@@ -178,7 +183,9 @@ The `npm run videos` command is fully resumable — re-running it will skip any 
 
 ## The aircraft
 
-The Bell 212 (UH-1N "Twin Huey") is a twin-engine medium utility helicopter. Key facts:
+### Bell 212 (UH-1N "Twin Huey")
+
+The helicopter from The Matrix. Twin-engine medium utility helicopter.
 
 - Engine: Pratt & Whitney Canada PT6T-3 Twin-Pac (two coupled turboshafts)
 - Max speed: 130 kt / 240 km/h
@@ -187,6 +194,18 @@ The Bell 212 (UH-1N "Twin Huey") is a twin-engine medium utility helicopter. Key
 - The real helicopter used in filming was shot in Sydney, Australia
 
 In a continuity error, Tank's loading screen shows a B-206 image while the text reads "B-212."
+
+### Bell 47 (H-13 Sioux)
+
+The bubble-canopy helicopter depicted in the short film. The world's first certified civilian
+helicopter (1946), famous from M*A*S*H, and one of the most recognizable aircraft ever built.
+
+- Engine: Lycoming TVO-435 (turbocharged, 270–280 hp) on the definitive 47G-3B
+- Max speed: 91 kt / 105 mph
+- Service ceiling: ~10,500–11,000 ft
+- Capacity: pilot + 2 passengers (or 2 external litter patients in medevac config)
+- Distinctive feature: manually coordinated throttle — no auto-correlation
+- Production run: 1946–1974, over 5,600 built worldwide
 
 ## License
 
